@@ -1,9 +1,11 @@
 """Core PGlite process management."""
 
+import ctypes
 import json
 import logging
 import os
 import shutil
+import signal
 import subprocess  # nosec B404 - subprocess needed for npm/node process management
 import sys
 import tempfile
@@ -19,6 +21,15 @@ from py_pglite import __version__
 from py_pglite.config import PGliteConfig
 from py_pglite.extensions import SUPPORTED_EXTENSIONS
 from py_pglite.utils import find_pglite_modules
+
+
+def _preexec_linux() -> None:
+    """Set parent death signal and create new process group on Linux."""
+    os.setsid()
+    # PR_SET_PDEATHSIG = 1
+    result = ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, signal.SIGKILL)
+    if result != 0:
+        raise RuntimeError("prctl failed to set parent death signal")
 
 
 class PGliteManager:
@@ -430,9 +441,9 @@ class PGliteManager:
                 bufsize=0,  # Unbuffered for real-time monitoring
                 universal_newlines=True,
                 env=env,
-                preexec_fn=os.setsid
-                if hasattr(os, "setsid")
-                else None,  # Create new process group on Unix
+                preexec_fn=_preexec_linux
+                if sys.platform == "linux"
+                else (os.setsid if hasattr(os, "setsid") else None),
             )
 
             # Wait for startup with robust monitoring
