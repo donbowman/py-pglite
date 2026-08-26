@@ -82,13 +82,13 @@ class PGliteManager:
         package_json = work_dir / "package.json"
         if not package_json.exists():
             dependencies = {
-                "@electric-sql/pglite": "^0.5.7",
-                "@electric-sql/pglite-socket": "^0.2.10",
+                "@electric-sql/pglite": "^0.5.8",
+                "@electric-sql/pglite-socket": "^0.2.11",
             }
             # The pgvector extension lives in its own npm package since
             # pglite 0.5.x split it out of the main bundle.
             if self.config.extensions and "pgvector" in self.config.extensions:
-                dependencies["@electric-sql/pglite-pgvector"] = "^0.0.8"
+                dependencies["@electric-sql/pglite-pgvector"] = "^0.0.9"
             package_content = {
                 "name": "py-pglite-env",
                 "version": __version__,
