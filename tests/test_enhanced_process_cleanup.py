@@ -134,6 +134,9 @@ class TestEnhancedProcessCleanup:
             patch("subprocess.Popen", return_value=mock_process) as mock_popen,
             patch("pathlib.Path.exists", return_value=True),
             patch("socket.socket") as mock_socket_class,
+            patch(
+                "py_pglite.manager._postgres_startup_probe", return_value=True
+            ) as mock_probe,
             patch("time.sleep"),
             patch("os.setsid", mock_setsid),
         ):
@@ -147,6 +150,7 @@ class TestEnhancedProcessCleanup:
             call_kwargs = mock_popen.call_args[1]
             assert "preexec_fn" in call_kwargs
             assert call_kwargs["preexec_fn"] is not None
+            mock_probe.assert_called_once()
 
     def test_start_without_setsid(self):
         """Test that process starts without process group when setsid not available."""
@@ -168,7 +172,11 @@ class TestEnhancedProcessCleanup:
             patch("subprocess.Popen", return_value=mock_process) as mock_popen,
             patch("pathlib.Path.exists", return_value=True),
             patch("socket.socket") as mock_socket_class,
+            patch(
+                "py_pglite.manager._postgres_startup_probe", return_value=True
+            ) as mock_probe,
             patch("time.sleep"),
+            patch("py_pglite.manager.sys.platform", "darwin"),  # Non-Linux path
             patch("os.setsid", None),  # Simulate setsid not available
         ):
             mock_socket = Mock()
@@ -180,6 +188,7 @@ class TestEnhancedProcessCleanup:
             mock_popen.assert_called_once()
             call_kwargs = mock_popen.call_args[1]
             assert call_kwargs.get("preexec_fn") is None
+            mock_probe.assert_called_once()
 
 
 class TestEnhancedStopMethod:
@@ -312,6 +321,7 @@ class TestTempDirCleanup:
     def test_cleanup_temp_dirs_removes_socket_and_work_dirs(self):
         """Test that _cleanup_temp_dirs removes both socket and work directories."""
         import shutil
+
         from pathlib import Path
 
         manager = PGliteManager()
@@ -352,6 +362,7 @@ class TestTempDirCleanup:
     def test_cleanup_temp_dirs_no_auto_work_dir(self):
         """Test _cleanup_temp_dirs does not remove user-specified work dir."""
         import shutil
+
         from pathlib import Path
 
         manager = PGliteManager()
@@ -370,6 +381,7 @@ class TestTempDirCleanup:
     def test_cleanup_temp_dirs_work_dir_already_gone(self):
         """Test _cleanup_temp_dirs handles work dir already deleted."""
         import shutil
+
         from pathlib import Path
 
         manager = PGliteManager()
